@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Book</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        section {
+            padding: 25px 30px;
+            border-bottom: 1px solid #eee;
+        }
+
+        section:last-child {
+            border-bottom: none;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 5px;
+            color: white;
+            font-weight: 600;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-add {
+            background: #10b981;
+        }
+
+        .btn-display {
+            background: #3b82f6;
+        }
+
+        .btn-search {
+            background: #f59e0b;
+        }
+
+        .btn-undo {
+            background: #8b5cf6;
+        }
+
+        .btn-export {
+            background: #06b6d4;
+        }
+
+        .btn-delete {
+            background: #ef4444;
+            padding: 8px 15px;
+            font-size: 0.9em;
+        }
+
+        .message {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        #searchBox {
+            display: none;
+        }
+
+        .contact-card {
+            background: #f9fafb;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .contact-card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .contact-card p {
+            color: #555;
+            margin: 5px 0;
+        }
+
+        #count {
+            color: #667eea;
+            font-size: 0.9em;
+            font-weight: normal;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📇 Contact Book</h1>
+            <p>Simple & Easy Contact Management</p>
+        </header>
+
+        <section>
+            <h2>Add New Contact</h2>
+            <form id="contactForm">
+                <div class="form-group">
+                    <label>Name:</label>
+                    <input type="text" id="name" placeholder="Enter full name" required>
+                </div>
+                <div class="form-group">
+                    <label>Phone:</label>
+                    <input type="tel" id="phone" placeholder="Enter phone number" required>
+                </div>
+                <div class="form-group">
+                    <label>Email:</label>
+                    <input type="email" id="email" placeholder="Enter email address" required>
+                </div>
+                <button type="submit" class="btn btn-add">Add Contact</button>
+            </form>
+            <div id="addMessage" class="message"></div>
+        </section>
+
+        <section>
+            <h2>Actions</h2>
+            <button class="btn btn-display" onclick="displayAll()">Display All Contacts</button>
+            <button class="btn btn-search" onclick="toggleSearch()">Search Contact</button>
+            <button class="btn btn-undo" onclick="undoDelete()">Undo Delete</button>
+            <button class="btn btn-export" onclick="exportContacts()">Export to JSON</button>
+        </section>
+
+        <section id="searchBox">
+            <h2>Search Contact</h2>
+            <input type="text" id="searchInput" placeholder="Enter name to search">
+            <button class="btn btn-search" onclick="searchContact()" style="margin-top: 10px;">Search</button>
+            <div id="searchMessage" class="message"></div>
+        </section>
+
+        <section>
+            <h2>Contact List <span id="count">(0 contacts)</span></h2>
+            <div id="contactList"></div>
+        </section>
+    </div>
+
+    <script>
+        let contacts = [];
+        let deletedStack = [];
+
+        // Add contact
+        document.getElementById('contactForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const contact = {
+                name: document.getElementById('name').value,
+                phone: document.getElementById('phone').value,
+                email: document.getElementById('email').value
+            };
+            
+            contacts.push(contact);
+            
+            showMessage('addMessage', '✓ Contact added successfully!', 'success');
+            this.reset();
+            updateCount();
+        });
+
+        // Display all contacts
+        function displayAll() {
+            const list = document.getElementById('contactList');
+            
+            if (contacts.length === 0) {
+                list.innerHTML = '<p style="color: #999;">No contacts found!</p>';
+                return;
+            }
+            
+            list.innerHTML = contacts.map((contact, index) => `
+                <div class="contact-card">
+                    <h3>Contact #${index + 1}</h3>
+                    <p><strong>Name:</strong> ${contact.name}</p>
+                    <p><strong>Phone:</strong> ${contact.phone}</p>
+                    <p><strong>Email:</strong> ${contact.email}</p>
+                    <button class="btn btn-delete" onclick="deleteContact(${index})">Delete</button>
+                </div>
+            `).join('');
+        }
+
+        // Toggle search box
+        function toggleSearch() {
+            const searchBox = document.getElementById('searchBox');
+            searchBox.style.display = searchBox.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Search contact
+        function searchContact() {
+            const searchName = document.getElementById('searchInput').value.trim();
+            const found = contacts.find(c => c.name.toLowerCase() === searchName.toLowerCase());
+            
+            if (found) {
+                showMessage('searchMessage', 
+                    `✓ Contact Found!\nName: ${found.name}\nPhone: ${found.phone}\nEmail: ${found.email}`, 
+                    'success');
+            } else {
+                showMessage('searchMessage', '✗ Contact not found!', 'error');
+            }
+        }
+
+        // Delete contact
+        function deleteContact(index) {
+            deletedStack.push(contacts[index]);
+            contacts.splice(index, 1);
+            displayAll();
+            updateCount();
+            alert('✓ Contact deleted! (You can undo this)');
+        }
+
+        // Undo delete
+        function undoDelete() {
+            if (deletedStack.length === 0) {
+                alert('✗ Nothing to undo!');
+                return;
+            }
+            
+            contacts.push(deletedStack.pop());
+            displayAll();
+            updateCount();
+            alert('✓ Last deleted contact restored!');
+        }
+
+        // Export to JSON
+        function exportContacts() {
+            const dataStr = JSON.stringify(contacts, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'contacts.json';
+            link.click();
+            alert('✓ Contacts exported to contacts.json!');
+        }
+
+        // Helper functions
+        function showMessage(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `message ${type}`;
+            element.style.display = 'block';
+            
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 3000);
+        }
+
+        function updateCount() {
+            document.getElementById('count').textContent = `(${contacts.length} contacts)`;
+        }
+    </script>
+</body>
+</html>
